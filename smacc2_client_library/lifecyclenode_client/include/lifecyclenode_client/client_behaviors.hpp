@@ -23,4 +23,5 @@
 #include <lifecyclenode_client/client_behaviors/cb_cleanup.hpp>
 #include <lifecyclenode_client/client_behaviors/cb_configure.hpp>
 #include <lifecyclenode_client/client_behaviors/cb_deactivate.hpp>
+#include <lifecyclenode_client/client_behaviors/cb_deactivate_on_exit.hpp>
 #include <lifecyclenode_client/client_behaviors/cb_shutdown.hpp>
