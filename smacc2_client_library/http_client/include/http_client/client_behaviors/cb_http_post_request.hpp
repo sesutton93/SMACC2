@@ -20,41 +20,15 @@
 
 #pragma once
 
-#include <cstring>
-#include <http_client/client_behaviors/cb_http_get_request.hpp>
+#include <http_client/cl_http_client.hpp>
+#include <http_client/client_behaviors/cb_http_request.hpp>
 #include <smacc2/smacc.hpp>
 
-namespace sm_atomic_http
+namespace cl_http
 {
-
-template <typename TSource, typename TOrthogonal>
-struct EvHttp : sc::event<EvHttp<TSource, TOrthogonal>>
-{
-};
-
-class CbHttpRequest : public cl_http::CbHttpGetRequest
+class CbHttpPostRequest : public CbHttpRequestBase
 {
 public:
-  template <typename TOrthogonal, typename TSourceObject>
-  void onOrthogonalAllocation()
-  {
-    triggerTranstition = [this]()
-    {
-      auto event = new EvHttp<TSourceObject, TOrthogonal>();
-      this->postEvent(event);
-    };
-  }
-
-  void onResponseReceived(const cl_http::ClHttp::TResponse & response)
-  {
-    RCLCPP_INFO_STREAM(this->getLogger(), "ON RESPONSE");
-    RCLCPP_INFO_STREAM(this->getLogger(), response.body());
-    triggerTranstition();
-  }
-
-private:
-  cl_http::ClHttp * cl_http_;
-
-  std::function<void()> triggerTranstition;
+  CbHttpPostRequest() : CbHttpRequestBase(ClHttp::kHttpRequestMethod::POST) {}
 };
-}  // namespace sm_atomic_http
+}  // namespace cl_http

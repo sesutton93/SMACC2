@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <http_client/http_client.hpp>
+#include <http_client/cl_http_client.hpp>
 #include <smacc2/smacc.hpp>
 
 namespace sm_atomic_http {

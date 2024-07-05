@@ -18,7 +18,7 @@
  *
  ******************************************************************************************************************/
 
-#include <http_client/http_client.hpp>
+#include <http_client/cl_http_client.hpp>
 
 namespace cl_http
 {

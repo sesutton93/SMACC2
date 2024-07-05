@@ -21,40 +21,40 @@
 #pragma once
 
 #include <cstring>
-#include <http_client/client_behaviors/cb_http_get_request.hpp>
+#include <http_client/cl_http_client.hpp>
 #include <smacc2/smacc.hpp>
 
-namespace sm_atomic_http
+namespace cl_http
 {
 
-template <typename TSource, typename TOrthogonal>
-struct EvHttp : sc::event<EvHttp<TSource, TOrthogonal>>
-{
-};
-
-class CbHttpRequest : public cl_http::CbHttpGetRequest
+class CbHttpRequestBase : public smacc2::SmaccClientBehavior
 {
 public:
+  CbHttpRequestBase(const ClHttp::kHttpRequestMethod http_request_type)
+  : kRequestType(http_request_type)
+  {
+  }
+
   template <typename TOrthogonal, typename TSourceObject>
   void onOrthogonalAllocation()
   {
-    triggerTranstition = [this]()
-    {
-      auto event = new EvHttp<TSourceObject, TOrthogonal>();
-      this->postEvent(event);
-    };
   }
 
-  void onResponseReceived(const cl_http::ClHttp::TResponse & response)
+  virtual void runtimeConfigure() override
   {
-    RCLCPP_INFO_STREAM(this->getLogger(), "ON RESPONSE");
-    RCLCPP_INFO_STREAM(this->getLogger(), response.body());
-    triggerTranstition();
+    this->requiresClient(cl_http_);
+    cl_http_->onResponseReceived(&CbHttpRequestBase::onResponseReceived, this);
   }
+
+  virtual void onResponseReceived(const ClHttp::TResponse & response) {}
+
+  virtual void onEntry() override { cl_http_->makeRequest(kRequestType); }
+
+  virtual void onExit() override {}
 
 private:
-  cl_http::ClHttp * cl_http_;
+  const ClHttp::kHttpRequestMethod kRequestType;
 
-  std::function<void()> triggerTranstition;
+  ClHttp * cl_http_;
 };
-}  // namespace sm_atomic_http
+}  // namespace cl_http

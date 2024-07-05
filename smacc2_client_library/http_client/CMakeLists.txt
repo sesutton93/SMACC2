@@ -27,7 +27,7 @@ add_library(http_session
 )
 
 add_library(${PROJECT_NAME}
-  src/http_client/http_client.cpp
+  src/http_client/cl_http_client.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}

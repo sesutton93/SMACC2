@@ -14,20 +14,20 @@
 
 #include <smacc2/smacc.hpp>
 
-namespace sm_atomic_http {
+namespace sm_atomic_http
+{
+
 // STATE DECLARATION
-struct State2 : smacc2::SmaccState<State2, SmAtomicHttp> {
+struct State2 : smacc2::SmaccState<State2, SmAtomicHttp>
+{
   using SmaccState::SmaccState;
 
   // TRANSITION TABLE
-  typedef mpl::list<
-      Transition<EvHttp<CbHttpRequest, OrHttp>, State1, SUCCESS> >
-      reactions;
+  typedef mpl::list<Transition<EvHttp<CbHttpRequest, OrHttp>, State1, SUCCESS>>
+    reactions;
 
   // STATE FUNCTIONS
-  static void staticConfigure() {
-    configure_orthogonal<OrHttp, CbHttpRequest>();
-  }
+  static void staticConfigure() { configure_orthogonal<OrHttp, CbHttpRequest>(); }
 
   void runtimeConfigure() { RCLCPP_INFO(getLogger(), "Entering State2"); }
 

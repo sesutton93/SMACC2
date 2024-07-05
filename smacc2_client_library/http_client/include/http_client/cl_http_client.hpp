@@ -28,14 +28,10 @@
 #include <boost/beast/version.hpp>
 #include <http_client/http_session.hpp>
 #include <http_client/ssl_http_session.hpp>
-#include <iostream>
-#include <memory>
-#include <optional>
 #include <smacc2/smacc.hpp>
 #include <smacc2/smacc_client.hpp>
 #include <string>
 #include <thread>
-#include <unordered_map>
 
 namespace cl_http
 {
