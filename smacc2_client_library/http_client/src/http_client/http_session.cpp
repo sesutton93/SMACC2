@@ -30,6 +30,8 @@ http_session::http_session(
 {
 }
 
+void http_session::setBody(const std::string & body) { req_.body() = body; }
+
 void http_session::run(
   const std::string & host, const std::string & target, const boost::beast::http::verb http_method,
   const int & version)

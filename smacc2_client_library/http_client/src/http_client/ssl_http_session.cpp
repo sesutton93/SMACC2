@@ -31,6 +31,21 @@ ssl_http_session::ssl_http_session(
 {
 }
 
+void ssl_http_session::setBody(const std::string & body) { req_.body() = body; }
+
+void ssl_http_session::setHeaders(const std::unordered_map<std::string, std::string> & headers)
+{
+  for (const auto & [key, val] : headers)
+  {
+    this->appendToHeader(key, val);
+  }
+}
+
+void ssl_http_session::appendToHeader(const std::string & key, const std::string & val)
+{
+  req_.set(key, val);
+}
+
 void ssl_http_session::run(
   const std::string & host, const std::string & target, const boost::beast::http::verb http_method,
   const int & version)
@@ -42,6 +57,14 @@ void ssl_http_session::run(
   req_.set(boost::beast::http::field::host, host);
   req_.set(boost::beast::http::field::user_agent, BOOST_BEAST_VERSION_STRING);
 
+  // Set an SNI to deal with CDNs
+  if (!SSL_set_tlsext_host_name(stream_.native_handle(), host.c_str()))
+  {
+    boost::system::error_code ec{
+      static_cast<int>(::ERR_get_error()), boost::asio::error::get_ssl_category()};
+    std::cerr << ec.message() << "\n";
+    return;
+  }
   // Look up the domain name
   resolver_.async_resolve(
     host.c_str(), kPort.c_str(),
