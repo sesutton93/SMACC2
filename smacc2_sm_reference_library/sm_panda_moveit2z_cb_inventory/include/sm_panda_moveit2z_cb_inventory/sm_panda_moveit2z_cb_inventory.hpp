@@ -28,21 +28,39 @@
 
 // ORTHOGONALS
 #include "sm_panda_moveit2z_cb_inventory/orthogonals/or_arm.hpp"
+#include "sm_panda_moveit2z_cb_inventory/orthogonals/or_keyboard.hpp"
 
 #include <moveit2z_client/cl_moveit2z.hpp>
 #include <moveit2z_client/client_behaviors.hpp>
 
+#include <keyboard_client/cl_keyboard.hpp>
+#include <keyboard_client/client_behaviors/cb_default_keyboard_behavior.hpp>
+
 #include <smacc2/client_behaviors/cb_wait_topic_message.hpp>
+
+// STATE REACTORS
+//#include <sr_all_events_go/sr_all_events_go.hpp>
+//#include <sr_conditional/sr_conditional.hpp>
+//#include <sr_event_countdown/sr_event_countdown.hpp>
+
+using namespace cl_moveit2z;
+using namespace cl_keyboard;
+//using namespace smacc2::state_reactors;
 
 
 namespace sm_panda_moveit2z_cb_inventory
 {
 
-using namespace cl_moveit2z;
+//using namespace cl_moveit2z;
+//using namespace cl_keyboard;
+//using namespace smacc2::state_reactors;
 
 //STATES
 struct StAcquireSensors;
+struct StAcquireSensors3;
 struct StMoveJoints;
+struct StMoveJoints2;
+struct StMoveJoints3;
 struct StMoveEndEffector;
 struct StMoveCartesianRelative;
 struct StMoveCartesianRelative2;
@@ -57,21 +75,27 @@ struct StUndoLastTrajectory;
 
 //--------------------------------------------------------------------
 //STATE_MACHINE
-struct SmPandaMoveit2zCbInventory : public smacc2::SmaccStateMachineBase<SmPandaMoveit2zCbInventory, StAcquireSensors>
+struct SmPandaMoveit2zCbInventory : public smacc2::SmaccStateMachineBase<SmPandaMoveit2zCbInventory, StAcquireSensors3>
 {
   using SmaccStateMachineBase::SmaccStateMachineBase;
 
-  void onInitialize() override { this->createOrthogonal<OrArm>(); }
+  void onInitialize() override { 
+    this->createOrthogonal<OrArm>(); 
+    this->createOrthogonal<OrKeyboard>();
+    }
 };
 
 }  // namespace sm_panda_moveit2z_cb_inventory
 
 // STATES
 #include "states/st_acquire_sensors.hpp"
+#include "states/st_acquire_sensors_3.hpp"
 #include "states/st_attach_object.hpp"
 #include "states/st_move_end_effector.hpp"
 #include "states/st_circular_pivot_motion.hpp"
 #include "states/st_move_joints.hpp"
+#include "states/st_move_joints_2.hpp"
+#include "states/st_move_joints_3.hpp"
 #include "states/st_detach_object.hpp"
 #include "states/st_move_known_state.hpp"
 #include "states/st_end_effector_rotate.hpp"
