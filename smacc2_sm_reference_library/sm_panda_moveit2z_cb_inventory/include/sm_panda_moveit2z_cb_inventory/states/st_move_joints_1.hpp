@@ -32,7 +32,7 @@ using namespace cl_moveit2z;
 using namespace cl_keyboard;
 
 // STATE DECLARATION
-struct StMoveJoints : smacc2::SmaccState<StMoveJoints, SmPandaMoveit2zCbInventory>
+struct StMoveJoints1 : smacc2::SmaccState<StMoveJoints1, SmPandaMoveit2zCbInventory>
 {
   using SmaccState::SmaccState;
 
@@ -42,11 +42,12 @@ struct StMoveJoints : smacc2::SmaccState<StMoveJoints, SmPandaMoveit2zCbInventor
 
   // TRANSITION TABLE
   typedef boost::mpl::list<
-    Transition<EvCbSuccess<CbMoveJoints, OrArm>, StMoveJoints2, SUCCESS>,
-    Transition<EvCbFailure<CbMoveJoints, OrArm>, StMoveJoints, ABORT>,
 
-    Transition<EvKeyPressP<CbDefaultKeyboardBehavior, OrKeyboard>, StAcquireSensors, PREVIOUS>,  
-    Transition<EvKeyPressN<CbDefaultKeyboardBehavior, OrKeyboard>, StMoveJoints2, NEXT>  
+    Transition<EvCbSuccess<CbMoveJoints, OrArm>, StPause3, SUCCESS>,
+    Transition<EvCbFailure<CbMoveJoints, OrArm>, StMoveJoints1, ABORT>,
+  
+    Transition<EvKeyPressN<CbDefaultKeyboardBehavior, OrKeyboard>, StPause3, NEXT>  
+
 
     >
     reactions;

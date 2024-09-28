@@ -21,19 +21,24 @@
 
 #pragma once
 
-#include "rclcpp/rclcpp.hpp"
-#include "smacc2/smacc.hpp"
+#include <sensor_msgs/msg/joint_state.h>
+#include <smacc2/client_behaviors/cb_sleep_for.hpp>
 
 namespace sm_panda_moveit2z_cb_inventory
 {
 // SMACC2 classes
+using smacc2::EvStateRequestFinish;
 using smacc2::Transition;
 using smacc2::default_transition_tags::SUCCESS;
 using namespace smacc2;
+using namespace cl_moveit2z;
+using smacc2::client_behaviors::CbWaitTopicMessage;
+using smacc2::client_behaviors::CbSleepFor;
+using namespace std::chrono_literals;
 using namespace cl_keyboard;
 
 // STATE DECLARATION
-struct StMoveKnownState : smacc2::SmaccState<StMoveKnownState, SmPandaMoveit2zCbInventory>
+struct StPause4 : smacc2::SmaccState<StPause4, SmPandaMoveit2zCbInventory>
 {
   using SmaccState::SmaccState;
 
@@ -43,28 +48,21 @@ struct StMoveKnownState : smacc2::SmaccState<StMoveKnownState, SmPandaMoveit2zCb
 
   // TRANSITION TABLE
   typedef boost::mpl::list<
-      Transition<EvCbSuccess<CbMoveKnownState, OrArm>, StPouringMotion, SUCCESS>,
-      Transition<EvCbFailure<CbMoveKnownState, OrArm>, StPouringMotion, ABORT>,
+    Transition<EvCbSuccess<CbSleepFor, OrArm>, StMoveJoints3, SUCCESS>,
+    
+    Transition<EvKeyPressN<CbDefaultKeyboardBehavior, OrKeyboard>, StMoveJoints3, NEXT>  
+  
 
-      Transition<EvKeyPressP<CbDefaultKeyboardBehavior, OrKeyboard>, StExecuteLastTrajectory, PREVIOUS>,  
-      Transition<EvKeyPressN<CbDefaultKeyboardBehavior, OrKeyboard>, StPouringMotion, NEXT>  
-    >
-    reactions;
+    > reactions;
 
   // STATE FUNCTIONS
   static void staticConfigure()
   {
-    std::string pkg = "sm_panda_moveit2z_cb_inventory";
-    std::string filepath = "config/move_group_client/known_states/control_authority_posture.yaml";
-
-    configure_orthogonal<OrArm, CbMoveKnownState>(pkg, filepath);
+    // configure_orthogonal<OrArm, CbWaitTopicMessage<sensor_msgs::msg::JointState>>("/joint_states");
+    configure_orthogonal<OrArm, CbSleepFor>(15s);
     configure_orthogonal<OrKeyboard, CbDefaultKeyboardBehavior>();
-  }
+  };
 
-  void runtimeConfigure() { RCLCPP_INFO(getLogger(), "Entering StMoveKnownState"); }
-
-  void onEntry() { RCLCPP_INFO(getLogger(), "On Entry!"); }
-
-  void onExit() { RCLCPP_INFO(getLogger(), "On Exit!"); }
+  void runtimeConfigure() {}
 };
 }  // namespace sm_panda_moveit2z_cb_inventory

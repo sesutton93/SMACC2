@@ -21,6 +21,9 @@
 
 #pragma once
 
+#include <sensor_msgs/msg/joint_state.h>
+#include <smacc2/client_behaviors/cb_sleep_for.hpp>
+
 namespace sm_panda_moveit2z_cb_inventory
 {
 // SMACC2 classes
@@ -29,10 +32,13 @@ using smacc2::Transition;
 using smacc2::default_transition_tags::SUCCESS;
 using namespace smacc2;
 using namespace cl_moveit2z;
+using smacc2::client_behaviors::CbWaitTopicMessage;
+using smacc2::client_behaviors::CbSleepFor;
+using namespace std::chrono_literals;
 using namespace cl_keyboard;
 
 // STATE DECLARATION
-struct StMoveJoints3 : smacc2::SmaccState<StMoveJoints3, SmPandaMoveit2zCbInventory>
+struct StPause3 : smacc2::SmaccState<StPause3, SmPandaMoveit2zCbInventory>
 {
   using SmaccState::SmaccState;
 
@@ -42,43 +48,21 @@ struct StMoveJoints3 : smacc2::SmaccState<StMoveJoints3, SmPandaMoveit2zCbInvent
 
   // TRANSITION TABLE
   typedef boost::mpl::list<
-
-    Transition<EvCbSuccess<CbMoveJoints, OrArm>, StPause5, SUCCESS>,
-    Transition<EvCbFailure<CbMoveJoints, OrArm>, StMoveJoints3, ABORT>,
+    Transition<EvCbSuccess<CbSleepFor, OrArm>, StMoveJoints2, SUCCESS>,
+    
+    Transition<EvKeyPressN<CbDefaultKeyboardBehavior, OrKeyboard>, StMoveJoints2, NEXT>  
   
-    Transition<EvKeyPressN<CbDefaultKeyboardBehavior, OrKeyboard>, StPause5, NEXT>  
 
-
-    >
-    reactions;
+    > reactions;
 
   // STATE FUNCTIONS
   static void staticConfigure()
   {
-    std::map<std::string, double> jointValues{
-      {"panda_joint1", 0.0},
-      {"panda_joint2", 0.0},
-      {"panda_joint3", 0.0},
-      {"panda_joint4", -M_PI/2},
-      {"panda_joint5", 0.0},
-      {"panda_joint6", M_PI/2},
-      {"panda_joint7", 0.0}
-      };
-
-    // panda_joint6:
-    // panda_joint7:
-    // panda_finger_joint1:
-    // panda_finger_joint2:
-
-    configure_orthogonal<OrArm, CbMoveJoints>(jointValues);
+    // configure_orthogonal<OrArm, CbWaitTopicMessage<sensor_msgs::msg::JointState>>("/joint_states");
+    configure_orthogonal<OrArm, CbSleepFor>(15s);
     configure_orthogonal<OrKeyboard, CbDefaultKeyboardBehavior>();
   };
 
-  void runtimeConfigure()
-  {
-    ClMoveit2z * moveGroupClient;
-    this->requiresClient(moveGroupClient);
-    this->getClientBehavior<OrArm,CbMoveJoints>()->scalingFactor_ = 1;
-  }
+  void runtimeConfigure() {}
 };
 }  // namespace sm_panda_moveit2z_cb_inventory
