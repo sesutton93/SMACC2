@@ -48,7 +48,7 @@ namespace backward_global_planner
 */
 BackwardGlobalPlanner::BackwardGlobalPlanner()
 {
-  skip_straight_motion_distance_ = 0.2;
+  skip_straight_motion_distance_ = 0.014;
   puresSpinningRadStep_ = 1000;  // rads
 }
 
@@ -67,6 +67,8 @@ void BackwardGlobalPlanner::configure(
   name_ = name;
   tf_ = tf;
   transform_tolerance_ = 0.1;
+  skip_straight_motion_distance_ = 0.014;
+  puresSpinningRadStep_ = 1000;  // rads
 
   // RCLCPP_INFO_NAMED(nh_->get_logger(), "Backwards", "BackwardGlobalPlanner initialize");
   costmap_ros_ = costmap_ros;
@@ -78,7 +80,22 @@ void BackwardGlobalPlanner::configure(
     nh_->create_publisher<visualization_msgs::msg::MarkerArray>("backward_planner/markers", 1);
 
   declareOrSet(nh_, name_ + ".transform_tolerance", transform_tolerance_);
+  declareOrSet(nh_, name_ + ".pure_spinning_rad_step", puresSpinningRadStep_);
+  declareOrSet(nh_, name_ + ".skip_straight_motion_distance", skip_straight_motion_distance_);
+
 }
+
+void BackwardGlobalPlanner::updateParameters()
+{ 
+  nh_->get_parameter(name_ + ".pure_spinning_rad_step", puresSpinningRadStep_);
+  nh_->get_parameter(name_ + ".skip_straight_motion_distance", skip_straight_motion_distance_);
+  nh_->get_parameter(name_ + ".transform_tolerance", transform_tolerance_);
+
+  RCLCPP_INFO_STREAM(nh_->get_logger(), "[BackwardGlobalPlanner.pure_spinning_rad_step: " << puresSpinningRadStep_);
+  RCLCPP_INFO_STREAM(nh_->get_logger(), "[BackwardGlobalPlanner.skip_straight_motion_distance: " << skip_straight_motion_distance_);
+  RCLCPP_INFO_STREAM(nh_->get_logger(), "[BackwardGlobalPlanner.transform_tolerance: " << transform_tolerance_);
+}
+
 
 /**
 ******************************************************************************************************************
@@ -95,6 +112,7 @@ void BackwardGlobalPlanner::cleanup() { this->cleanMarkers(); }
 void BackwardGlobalPlanner::activate()
 {
   RCLCPP_INFO_STREAM(nh_->get_logger(), "[BackwardGlobalPlanner] activating planner");
+  this->updateParameters();
   planPub_->on_activate();
   markersPub_->on_activate();
 }
@@ -228,6 +246,7 @@ void BackwardGlobalPlanner::createDefaultBackwardPath(
 nav_msgs::msg::Path BackwardGlobalPlanner::createPlan(
   const geometry_msgs::msg::PoseStamped & start, const geometry_msgs::msg::PoseStamped & goal)
 {
+  this->updateParameters();
   RCLCPP_INFO_STREAM(
     nh_->get_logger(), "[BackwardGlobalPlanner] goal frame id: "
                          << goal.header.frame_id << " pose: " << goal.pose.position);

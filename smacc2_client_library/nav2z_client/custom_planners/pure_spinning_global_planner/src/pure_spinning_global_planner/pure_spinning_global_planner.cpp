@@ -17,9 +17,9 @@
  * 	 Authors: Pablo Inigo Blasco, Brett Aldrich
  *
  ******************************************************************************************************************/
-#include <forward_global_planner/forward_global_planner.hpp>
 #include <nav2z_planners_common/common.hpp>
 #include <nav2z_planners_common/nav2z_client_tools.hpp>
+#include <pure_spinning_global_planner/pure_spinning_global_planner.hpp>
 
 #include <angles/angles.h>
 #include <tf2/transform_datatypes.h>
@@ -37,18 +37,18 @@
 
 namespace cl_nav2z
 {
-namespace forward_global_planner
+namespace pure_spinning_global_planner
 {
-ForwardGlobalPlanner::ForwardGlobalPlanner()
-//   : nh_("~/ForwardGlobalPlanner")
+PureSpinningGlobalPlanner::PureSpinningGlobalPlanner()
+//   : nh_("~/PureSpinningGlobalPlanner")
 {
-  skip_straight_motion_distance_ = 0.01; // 0.2;  // meters
-  puresSpinningRadStep_ = 1000;          // rads
+  skip_straight_motion_distance_ = 0.2;  // 0.2;  // meters
+  puresSpinningRadStep_ = 0.0174;        // rads
 }
 
-ForwardGlobalPlanner::~ForwardGlobalPlanner() {}
+PureSpinningGlobalPlanner::~PureSpinningGlobalPlanner() {}
 
-void ForwardGlobalPlanner::configure(
+void PureSpinningGlobalPlanner::configure(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent, std::string name,
   const std::shared_ptr<tf2_ros::Buffer> tf,
   const std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros)
@@ -58,54 +58,58 @@ void ForwardGlobalPlanner::configure(
   name_ = name;
   costmap_ros_ = costmap_ros;
 
-  RCLCPP_INFO(nh_->get_logger(), "[Forward Global Planner] initializing");
+  RCLCPP_INFO(nh_->get_logger(), "[Pure Spinning Global Planner] initializing");
   planPub_ = nh_->create_publisher<nav_msgs::msg::Path>("global_plan", rclcpp::QoS(1));
-  skip_straight_motion_distance_ = 0.2; //0.2  // meters
-  puresSpinningRadStep_ = 1000;          // rads
+  skip_straight_motion_distance_ = 0.2;  //0.2  // meters
+  puresSpinningRadStep_ = 0.0174;        // rads
   transform_tolerance_ = 0.1;
 
   declareOrSet(nh_, name_ + ".transform_tolerance", transform_tolerance_);
   declareOrSet(nh_, name_ + ".pure_spinning_rad_step", puresSpinningRadStep_);
   declareOrSet(nh_, name_ + ".skip_straight_motion_distance", skip_straight_motion_distance_);
 }
-void ForwardGlobalPlanner::updateParameters()
-{ 
+
+void PureSpinningGlobalPlanner::updateParameters()
+{
   nh_->get_parameter(name_ + ".pure_spinning_rad_step", puresSpinningRadStep_);
   nh_->get_parameter(name_ + ".skip_straight_motion_distance", skip_straight_motion_distance_);
   nh_->get_parameter(name_ + ".transform_tolerance", transform_tolerance_);
 
-  RCLCPP_INFO_STREAM(nh_->get_logger(), "[ForwardGlobalPlanner.pure_spinning_rad_step: " << puresSpinningRadStep_);
-  RCLCPP_INFO_STREAM(nh_->get_logger(), "[ForwardGlobalPlanner.skip_straight_motion_distance: " << skip_straight_motion_distance_);
-  RCLCPP_INFO_STREAM(nh_->get_logger(), "[ForwardGlobalPlanner.transform_tolerance: " << transform_tolerance_);
+  RCLCPP_INFO_STREAM(
+    nh_->get_logger(),
+    "[PureSpinningGlobalPlanner.pure_spinning_rad_step: " << puresSpinningRadStep_);
+  RCLCPP_INFO_STREAM(
+    nh_->get_logger(),
+    "[PureSpinningGlobalPlanner.skip_straight_motion_distance: " << skip_straight_motion_distance_);
+  RCLCPP_INFO_STREAM(
+    nh_->get_logger(), "[PureSpinningGlobalPlanner.transform_tolerance: " << transform_tolerance_);
 }
 
-void ForwardGlobalPlanner::cleanup() {}
+void PureSpinningGlobalPlanner::cleanup() {}
 
-void ForwardGlobalPlanner::activate() 
-{ 
-  RCLCPP_INFO_STREAM(nh_->get_logger(), "activating global planner ForwardGlobalPlanner");
+void PureSpinningGlobalPlanner::activate()
+{
+  RCLCPP_INFO_STREAM(nh_->get_logger(), "activating global planner PureSpinningGlobalPlanner");
   this->updateParameters();
-  planPub_->on_activate(); 
-  }
+  planPub_->on_activate();
+}
 
-void ForwardGlobalPlanner::deactivate()
+void PureSpinningGlobalPlanner::deactivate()
 {
   nav_msgs::msg::Path planMsg;
   planPub_->publish(planMsg);
   planPub_->on_deactivate();
 }
 
-nav_msgs::msg::Path ForwardGlobalPlanner::createPlan(
+nav_msgs::msg::Path PureSpinningGlobalPlanner::createPlan(
   const geometry_msgs::msg::PoseStamped & start, const geometry_msgs::msg::PoseStamped & goal)
 {
-
   this->updateParameters();
-
-  RCLCPP_INFO(nh_->get_logger(), "[Forward Global Planner] planning");
+  RCLCPP_INFO(nh_->get_logger(), "[Pure Spinning Global Planner] planning");
 
   rclcpp::Duration ttol = rclcpp::Duration::from_seconds(transform_tolerance_);
 
-  RCLCPP_INFO(nh_->get_logger(), "[Forward Global Planner] getting start and goal poses");
+  RCLCPP_INFO(nh_->get_logger(), "[Pure Spinning Global Planner] getting start and goal poses");
   //---------------------------------------------------------------------
   geometry_msgs::msg::PoseStamped transformedStart;
   nav_2d_utils::transformPose(tf_, costmap_ros_->getGlobalFrameID(), start, transformedStart, ttol);
@@ -116,7 +120,11 @@ nav_msgs::msg::Path ForwardGlobalPlanner::createPlan(
   transformedGoal.header.frame_id = costmap_ros_->getGlobalFrameID();
   //---------------------------------------------------------------------
 
-  RCLCPP_INFO(nh_->get_logger(), "[Forward Global Planner] creating plan vector");
+  RCLCPP_INFO_STREAM(
+    nh_->get_logger(), "[Pure Spinning Global Planner] Planning with transform tolerance of: "
+                         << transform_tolerance_);
+
+  RCLCPP_INFO(nh_->get_logger(), "[Pure Spinning Global Planner] creating plan vector");
   nav_msgs::msg::Path planMsg;
   std::vector<geometry_msgs::msg::PoseStamped> plan;
 
@@ -131,9 +139,7 @@ nav_msgs::msg::Path ForwardGlobalPlanner::createPlan(
   double length = sqrt(dx * dx + dy * dy);
 
   RCLCPP_INFO_STREAM(
-    nh_->get_logger(),
-    "[Forward Global Planner] current plan length: " << length);
-
+    nh_->get_logger(), "[Pure Spinning Global Planner] current plan length: " << length);
 
   geometry_msgs::msg::PoseStamped prevState;
   if (length > skip_straight_motion_distance_)
@@ -161,13 +167,13 @@ nav_msgs::msg::Path ForwardGlobalPlanner::createPlan(
   planMsg.header.frame_id = this->costmap_ros_->getGlobalFrameID();
 
   RCLCPP_INFO_STREAM(
-    nh_->get_logger(), "[Forward Global Planner] generated plan size: " << plan.size());
+    nh_->get_logger(), "[Pure Spinning Global Planner] generated plan size: " << plan.size());
 
   // check plan rejection
   bool acceptedGlobalPlan = true;
 
   RCLCPP_INFO(
-    nh_->get_logger(), "[Forward Global Planner] checking obstacles in the generated plan");
+    nh_->get_logger(), "[Pure Spinning Global Planner] checking obstacles in the generated plan");
   nav2_costmap_2d::Costmap2D * costmap2d = this->costmap_ros_->getCostmap();
   for (auto & p : plan)
   {
@@ -183,9 +189,9 @@ nav_msgs::msg::Path ForwardGlobalPlanner::createPlan(
     if (cost >= nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE)
     {
       RCLCPP_INFO_STREAM(
-        nh_->get_logger(), "[Forward Global Planner] pose " << p.pose.position.x << ", "
-                                                            << p.pose.position.y
-                                                            << " rejected, cost: " << cost);
+        nh_->get_logger(), "[Pure Spinning Global Planner] pose " << p.pose.position.x << ", "
+                                                                  << p.pose.position.y
+                                                                  << " rejected, cost: " << cost);
       acceptedGlobalPlan = false;
       break;
     }
@@ -194,22 +200,22 @@ nav_msgs::msg::Path ForwardGlobalPlanner::createPlan(
   if (acceptedGlobalPlan)
   {
     RCLCPP_INFO_STREAM(
-      nh_->get_logger(), "[Forward Global Planner] accepted plan: " << plan.size());
+      nh_->get_logger(), "[Pure Spinning Global Planner] accepted plan: " << plan.size());
     planPub_->publish(planMsg);
     return planMsg;
   }
   else
   {
-    RCLCPP_INFO(nh_->get_logger(), "[Forward Global Planner] plan rejected");
+    RCLCPP_INFO(nh_->get_logger(), "[Pure Spinning Global Planner] plan rejected");
     planMsg.poses.clear();
     planPub_->publish(planMsg);
     return planMsg;
   }
 }
 
-}  // namespace forward_global_planner
+}  // namespace pure_spinning_global_planner
 }  // namespace cl_nav2z
 
 // register this planner as a BaseGlobalPlanner plugin
 PLUGINLIB_EXPORT_CLASS(
-  cl_nav2z::forward_global_planner::ForwardGlobalPlanner, nav2_core::GlobalPlanner)
+  cl_nav2z::pure_spinning_global_planner::PureSpinningGlobalPlanner, nav2_core::GlobalPlanner)

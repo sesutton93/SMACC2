@@ -40,7 +40,7 @@ namespace forward_local_planner
 * ForwardLocalPlanner()
 ******************************************************************************************************************
 */
-ForwardLocalPlanner::ForwardLocalPlanner() : transform_tolerance_(0.1), waitingTimeout_(2s) {}
+ForwardLocalPlanner::ForwardLocalPlanner() : transform_tolerance_(0.05), waitingTimeout_(2s) {}
 
 ForwardLocalPlanner::~ForwardLocalPlanner() {}
 
@@ -117,7 +117,7 @@ void ForwardLocalPlanner::configure(
 }
 
 void ForwardLocalPlanner::updateParameters()
-{
+{ 
   nh_->get_parameter(name_ + ".k_rho", k_rho_);
   nh_->get_parameter(name_ + ".k_alpha", k_alpha_);
   nh_->get_parameter(name_ + ".k_betta", k_betta_);
@@ -367,6 +367,8 @@ geometry_msgs::msg::TwistStamped ForwardLocalPlanner::computeVelocityCommands(
   RCLCPP_DEBUG(
     nh_->get_logger(), "[ForwardLocalPlanner] ----- COMPUTE VELOCITY COMMAND LOCAL PLANNER ---");
 
+  RCLCPP_INFO_STREAM(
+  nh_->get_logger(), "[ForwardLocalPlanner] plan_.size:" << (int)plan_.size());
   bool ok = false;
   while (!ok)
   {
@@ -382,6 +384,8 @@ geometry_msgs::msg::TwistStamped ForwardLocalPlanner::computeVelocityCommands(
       double dx = p.x - currentPose.pose.position.x;
       double dy = p.y - currentPose.pose.position.y;
       double dist = sqrt(dx * dx + dy * dy);
+      RCLCPP_INFO_STREAM(
+      nh_->get_logger(), "[ForwardLocalPlanner] dist:" << dist);
 
       double pangle = tf2::getYaw(q);
       double angle = tf2::getYaw(currentPose.pose.orientation);

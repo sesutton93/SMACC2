@@ -128,7 +128,12 @@ geometry_msgs::msg::TwistStamped PureSpinningLocalPlanner::computeVelocityComman
     targetYaw = tf2::getYaw(goal.pose.orientation);
 
     if (use_shortest_angular_distance_)
+    {
+      RCLCPP_INFO_STREAM(
+        nh_->get_logger(),
+        "[PureSpinningLocalPlanner] Using shortest angular distance");
       angular_error = angles::shortest_angular_distance(currentYaw, targetYaw);
+    }
     else
       angular_error = targetYaw - currentYaw;
 
@@ -151,6 +156,10 @@ geometry_msgs::msg::TwistStamped PureSpinningLocalPlanner::computeVelocityComman
   auto omega = angular_error * k_betta_;
   cmd_vel.twist.angular.z =
     std::min(std::max(omega, -fabs(max_angular_z_speed_)), fabs(max_angular_z_speed_));
+
+  RCLCPP_INFO_STREAM(
+    nh_->get_logger(),
+    "[PureSpinningLocalPlanner] current subgoal angle: " << targetYaw*180/3.14);
 
   RCLCPP_INFO_STREAM(
     nh_->get_logger(),

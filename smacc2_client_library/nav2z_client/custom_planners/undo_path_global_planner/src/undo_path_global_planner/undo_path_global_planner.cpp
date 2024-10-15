@@ -63,6 +63,7 @@ void UndoPathGlobalPlanner::cleanup() { this->clearGoalMarker(); }
 void UndoPathGlobalPlanner::activate()
 {
   RCLCPP_INFO_STREAM(nh_->get_logger(), "activating planner UndoPathGlobalPlanner");
+  this->updateParameters();
   planPub_->on_activate();
   markersPub_->on_activate();
 }
@@ -103,7 +104,22 @@ void UndoPathGlobalPlanner::configure(
     "undo_path_planner/markers", rclcpp::QoS(1));
 
   declareOrSet(nh_, name_ + ".transform_tolerance", transform_tolerance_);
+  declareOrSet(nh_, name_ + ".skip_straight_motion_distance", skip_straight_motion_distance_);
 }
+void UndoPathGlobalPlanner::updateParameters()
+{
+  nh_->get_parameter(name_ + ".skip_straight_motion_distance", skip_straight_motion_distance_);
+  nh_->get_parameter(name_ + ".transform_tolerance", transform_tolerance_);
+
+  RCLCPP_INFO_STREAM(
+    nh_->get_logger(),
+    "[UndoPathGlobalPlanner.skip_straight_motion_distance: " << skip_straight_motion_distance_);
+  RCLCPP_INFO_STREAM(
+    nh_->get_logger(), "[UndoPathGlobalPlanner.transform_tolerance: " << transform_tolerance_);
+}
+
+
+
 /**
  ******************************************************************************************************************
  * onForwardTrailMsg()
@@ -375,6 +391,7 @@ void UndoPathGlobalPlanner::createDefaultUndoPathPlan(
 nav_msgs::msg::Path UndoPathGlobalPlanner::createPlan(
   const geometry_msgs::msg::PoseStamped & start, const geometry_msgs::msg::PoseStamped & goal)
 {
+  this->updateParameters();  
   // -------------- BASIC CHECKS ---------------------
 
   RCLCPP_INFO_STREAM(nh_->get_logger(), "[UndoPathGlobalPlanner] Undo global plan start ");

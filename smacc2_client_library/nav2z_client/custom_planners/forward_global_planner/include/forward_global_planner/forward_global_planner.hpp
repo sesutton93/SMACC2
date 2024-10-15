@@ -78,6 +78,7 @@ public:
     const geometry_msgs::msg::PoseStamped & start, const geometry_msgs::msg::PoseStamped & goal);
 
 private:
+  void updateParameters();
   // rclcpp::Node::SharedPtr nh_;
   rclcpp_lifecycle::LifecycleNode::SharedPtr nh_;
 

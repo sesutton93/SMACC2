@@ -82,7 +82,7 @@ void CpPlannerSwitcher::setPureSpinningPlanner(bool commit)
   RCLCPP_INFO(
     getLogger(), "[CpPlannerSwitcher] Planner Switcher: Trying to set PureSpinningPlanner");
 
-  desired_planner_ = "ForwardGlobalPlanner";
+  desired_planner_ = "PureSpinningGlobalPlanner";
   desired_controller_ = "PureSpinningLocalPlanner";
 
   if (commit) commitPublish();

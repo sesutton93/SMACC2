@@ -1,0 +1,6 @@
+<library path="pure_spinning_global_planner">
+  <class name="pure_spinning_global_planner::PureSpinningGlobalPlanner" type="cl_nav2z::pure_spinning_global_planner::PureSpinningGlobalPlanner" base_class_type="nav2_core::GlobalPlanner">
+    <description>
+    </description>
+  </class>
+</library>
