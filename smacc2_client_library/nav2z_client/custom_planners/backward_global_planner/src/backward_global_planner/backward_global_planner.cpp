@@ -48,7 +48,7 @@ namespace backward_global_planner
 */
 BackwardGlobalPlanner::BackwardGlobalPlanner()
 {
-  skip_straight_motion_distance_ = 0.014;
+  skip_straight_motion_distance_ = 0.014; // meters
   puresSpinningRadStep_ = 1000;  // rads
 }
 
@@ -61,7 +61,8 @@ BackwardGlobalPlanner::~BackwardGlobalPlanner() {}
 */
 void BackwardGlobalPlanner::configure(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent, std::string name,
-  std::shared_ptr<tf2_ros::Buffer> tf, std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros)
+  std::shared_ptr<tf2_ros::Buffer> tf,
+  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros)
 {
   this->nh_ = parent.lock();
   name_ = name;
@@ -70,9 +71,9 @@ void BackwardGlobalPlanner::configure(
   skip_straight_motion_distance_ = 0.014;
   puresSpinningRadStep_ = 1000;  // rads
 
-  // RCLCPP_INFO_NAMED(nh_->get_logger(), "Backwards", "BackwardGlobalPlanner initialize");
+  //RCLCPP_INFO_NAMED(nh_->get_logger(), "Backwards", "BackwardGlobalPlanner initialize");
   costmap_ros_ = costmap_ros;
-  // RCLCPP_WARN_NAMED(nh_->get_logger(), "Backwards", "initializating global planner, costmap address: %ld",
+  //RCLCPP_WARN_NAMED(nh_->get_logger(), "Backwards", "initializating global planner, costmap address: %ld",
   // (long)costmap_ros);
 
   planPub_ = nh_->create_publisher<nav_msgs::msg::Path>("backward_planner/global_plan", 1);
@@ -240,7 +241,7 @@ void BackwardGlobalPlanner::createDefaultBackwardPath(
 
 /**
 ******************************************************************************************************************
-* makePlan()
+* createPlan()
 ******************************************************************************************************************
 */
 nav_msgs::msg::Path BackwardGlobalPlanner::createPlan(
@@ -301,6 +302,7 @@ nav_msgs::msg::Path BackwardGlobalPlanner::createPlan(
         "[BackwardGlobalPlanner] backwards plan is rejected because interscts the obstacle "
         "inscribed inflated obstacle"
           << " at: " << p.pose.position.x << " " << p.pose.position.y);
+        acceptedGlobalPlan = false;
 
       break;
     }

@@ -19,12 +19,11 @@
  ******************************************************************************************************************/
 #pragma once
 
-#include <memory>
-#include <string>
 
 #include <nav2_core/global_planner.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <rclcpp/rclcpp.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 namespace cl_nav2z
 {
@@ -33,8 +32,6 @@ namespace forward_global_planner
 class ForwardGlobalPlanner : public nav2_core::GlobalPlanner
 {
 public:
-  using Ptr = std::shared_ptr<ForwardGlobalPlanner>;
-
   ForwardGlobalPlanner();
 
   /**
@@ -51,7 +48,7 @@ public:
   void configure(
     const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent, std::string name,
     const std::shared_ptr<tf2_ros::Buffer> tf,
-    const std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros) override;
+    const std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros);
 
   /**
    * @brief Method to cleanup resources used on shutdown.
@@ -84,8 +81,15 @@ private:
 
   std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> planPub_;
 
-  /// stored but almost not used
+  std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<visualization_msgs::msg::MarkerArray>>
+    markersPub_;
+
   std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros_;
+
+  void onForwardTrailMsg(const nav_msgs::msg::Path::ConstSharedPtr & trailMessage);
+
+  void publishGoalMarker(const geometry_msgs::msg::Pose & pose, double r, double g, double b);
+  void cleanMarkers();
 
   double skip_straight_motion_distance_;  // meters
 
@@ -93,9 +97,13 @@ private:
 
   std::string name_;
 
+  std::shared_ptr<tf2_ros::Buffer> tf_;
+
   double transform_tolerance_;
 
-  std::shared_ptr<tf2_ros::Buffer> tf_;
+  void createDefaultForwardPath(
+    const geometry_msgs::msg::PoseStamped & start, const geometry_msgs::msg::PoseStamped & goal,
+    std::vector<geometry_msgs::msg::PoseStamped> & plan);
 };
 }  // namespace forward_global_planner
 }  // namespace cl_nav2z

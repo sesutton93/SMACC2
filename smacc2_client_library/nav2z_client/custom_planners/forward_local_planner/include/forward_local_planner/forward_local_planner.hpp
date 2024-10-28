@@ -19,15 +19,17 @@
  ******************************************************************************************************************/
 #pragma once
 
-#include <eigen3/Eigen/Eigen>
 
 //#include <dynamic_reconfigure/server.h>
 #include <tf2/transform_datatypes.h>
-#include <nav2z_planners_common/common.hpp>
+#include <tf2_ros/buffer.h>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <nav2_core/controller.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <tf2/utils.h>
-#include <nav2_core/controller.hpp>
+#include <eigen3/Eigen/Eigen>
 
 typedef double meter;
 typedef double rad;
@@ -81,50 +83,97 @@ public:
 
 private:
   void updateParameters();
-  nav2_util::LifecycleNode::SharedPtr nh_;
 
+  // returns true if found
+  bool findInitialCarrotGoal(geometry_msgs::msg::PoseStamped & pose);
+
+  // returns true for a pure spining motion request
+  bool updateCarrotGoal(const geometry_msgs::msg::PoseStamped & pose);
+
+  bool resamplePrecisePlan();
+
+  void straightForwardsAndPureSpinCmd(
+    const geometry_msgs::msg::PoseStamped & pose, double & vetta, double & gamma,
+    double alpha_error, double betta_error, double rho_error);
+
+  void clearMarkers();
   void publishGoalMarker(double x, double y, double phi);
-  void cleanMarkers();
 
-  void generateTrajectory(
-    const Eigen::Vector3f & pos, const Eigen::Vector3f & vel, float maxdist, float maxangle,
-    float maxtime, float dt, std::vector<Eigen::Vector3f> & outtraj);
-  Eigen::Vector3f computeNewPositions(
-    const Eigen::Vector3f & pos, const Eigen::Vector3f & vel, double dt);
+  void computeCurrentEuclideanAndAngularErrorsToCarrotGoal(
+    const geometry_msgs::msg::PoseStamped & pose, double & dist, double & angular_error);
 
-  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmapRos_;
+  bool checkGoalReached(
+    const geometry_msgs::msg::PoseStamped & pose, double vetta, double gamma, double alpha_error,
+    geometry_msgs::msg::Twist & cmd_vel);
+
+  bool checkCurrentPoseInGoalRange(
+    const geometry_msgs::msg::PoseStamped & tfpose, const geometry_msgs::msg::Twist & currentTwist,
+    double angle_error, bool & linearGoalReached, nav2_core::GoalChecker * goalChecker);
+
+  bool resetDivergenceDetection();
+
+  bool divergenceDetectionUpdate(const geometry_msgs::msg::PoseStamped & pose);
+
+  bool checkCarrotHalfPlainConstraint(const geometry_msgs::msg::PoseStamped & pose);
+
+  //void generateTrajectory(
+  //  const Eigen::Vector3f & pos, const Eigen::Vector3f & vel, float maxdist, float maxangle,
+  //  float maxtime, float dt, std::vector<Eigen::Vector3f> & outtraj);
+  //Eigen::Vector3f computeNewPositions(
+  //  const Eigen::Vector3f & pos, const Eigen::Vector3f & vel, double dt);
+
+  nav2_util::LifecycleNode::SharedPtr nh_;
   std::string name_;
+
+  std::vector<geometry_msgs::msg::PoseStamped> forwardsPlanPath_;
+  std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmapRos_;
+  std::shared_ptr<tf2_ros::Buffer> tf_;
 
   rclcpp_lifecycle::LifecyclePublisher<visualization_msgs::msg::MarkerArray>::SharedPtr
     goalMarkerPublisher_;
+  std::shared_ptr<rclcpp_lifecycle::LifecyclePublisher<nav_msgs::msg::Path>> planPub_;
 
   double k_rho_;
   double k_alpha_;
   double k_betta_;
-  bool goalReached_;
+  double pure_spinning_allowed_betta_error_;
+  double linear_mode_rho_error_threshold_;
 
   const double alpha_offset_ = 0;
   const double betta_offset_ = 0;
 
-  meter carrot_distance_;
-  rad carrot_angular_distance_;
+  double max_linear_x_speed_;   // meters/sec
+  double max_angular_z_speed_;  // rads/sec
 
   double yaw_goal_tolerance_;  // radians
   double xy_goal_tolerance_;   // meters
 
-  double max_angular_z_speed_;
-  double max_linear_x_speed_;
+  meter carrot_distance_;
+  rad carrot_angular_distance_;
+  meter divergenceDetectionLastCarrotLinearDistance_;
+
   double transform_tolerance_;
 
-  // references the current point inside the backwardsPlanPath were the robot is located
-  int currentPoseIndex_;
-
-  std::vector<geometry_msgs::msg::PoseStamped> plan_;
-
-  bool waiting_;
   rclcpp::Duration waitingTimeout_;
   rclcpp::Time waitingStamp_;
-  std::shared_ptr<tf2_ros::Buffer> tf_;
+
+  bool goalReached_;
+  bool initialPureSpinningStage_;
+  bool straightForwardsAndPureSpinningMode_ = false;
+  bool enable_obstacle_checking_ = true;
+  bool inGoalPureSpinningState_ = false;
+  bool waiting_;
+
+  // references the current point inside the forwardsPlanPath were the robot is located
+  int currentCarrotPoseIndex_;
+
+  void generateTrajectory(
+    const Eigen::Vector3f & pos, const Eigen::Vector3f & vel, float maxdist, float maxangle,
+    float maxtime, float dt, std::vector<Eigen::Vector3f> & outtraj);
+
+  Eigen::Vector3f computeNewPositions(
+    const Eigen::Vector3f & pos, const Eigen::Vector3f & vel, double dt);
+
 };
 }  // namespace forward_local_planner
 }  // namespace cl_nav2z

@@ -19,50 +19,68 @@
  ******************************************************************************************************************/
 #include <forward_global_planner/forward_global_planner.hpp>
 #include <nav2z_planners_common/common.hpp>
-#include <nav2z_planners_common/nav2z_client_tools.hpp>
 
 #include <angles/angles.h>
 #include <tf2/transform_datatypes.h>
-// #include <tf2/utils.h>
+#include <nav2z_planners_common/nav2z_client_tools.hpp>
+#include <nav_msgs/msg/path.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
+#include <tf2/utils.h>
 #include <boost/assign.hpp>
 #include <boost/range/adaptor/reversed.hpp>
 #include <boost/range/algorithm/copy.hpp>
 #include <fstream>
 #include <nav_2d_utils/tf_help.hpp>
-#include <nav_msgs/msg/path.hpp>
 #include <pluginlib/class_list_macros.hpp>
-#include <rclcpp/rclcpp.hpp>
 #include <streambuf>
 
+#include <rclcpp/rclcpp.hpp>
+
+using namespace std::chrono_literals;
 namespace cl_nav2z
 {
 namespace forward_global_planner
 {
+/**
+******************************************************************************************************************
+* Constructor()
+******************************************************************************************************************
+*/
 ForwardGlobalPlanner::ForwardGlobalPlanner()
-//   : nh_("~/ForwardGlobalPlanner")
 {
-  skip_straight_motion_distance_ = 0.01; // 0.2;  // meters
+  skip_straight_motion_distance_ = 0.014; // meters
   puresSpinningRadStep_ = 1000;          // rads
 }
 
 ForwardGlobalPlanner::~ForwardGlobalPlanner() {}
+
+/**
+******************************************************************************************************************
+* initialize()
+******************************************************************************************************************
+*/
 
 void ForwardGlobalPlanner::configure(
   const rclcpp_lifecycle::LifecycleNode::WeakPtr & parent, std::string name,
   const std::shared_ptr<tf2_ros::Buffer> tf,
   const std::shared_ptr<nav2_costmap_2d::Costmap2DROS> costmap_ros)
 {
-  nh_ = parent.lock();
-  tf_ = tf;
+  this->nh_ = parent.lock();
   name_ = name;
-  costmap_ros_ = costmap_ros;
-
-  RCLCPP_INFO(nh_->get_logger(), "[Forward Global Planner] initializing");
-  planPub_ = nh_->create_publisher<nav_msgs::msg::Path>("global_plan", rclcpp::QoS(1));
-  skip_straight_motion_distance_ = 0.2; //0.2  // meters
-  puresSpinningRadStep_ = 1000;          // rads
+  tf_ = tf;
   transform_tolerance_ = 0.1;
+  skip_straight_motion_distance_ = 0.014;
+  puresSpinningRadStep_ = 1000;  // rads
+
+  //RCLCPP_INFO_NAMED(nh_->get_logger(), "Forwards", "ForwardGlobalPlanner initialize");
+  costmap_ros_ = costmap_ros;
+  //RCLCPP_WARN_NAMED(nh_->get_logger(), "Forwards", "initializating global planner, costmap address: %ld",
+  // (long)costmap_ros);
+
+  planPub_ = nh_->create_publisher<nav_msgs::msg::Path>("forward_planner/global_plan", 1);
+  markersPub_ =
+    nh_->create_publisher<visualization_msgs::msg::MarkerArray>("forward_planner/markers", 1);
 
   declareOrSet(nh_, name_ + ".transform_tolerance", transform_tolerance_);
   declareOrSet(nh_, name_ + ".pure_spinning_rad_step", puresSpinningRadStep_);
@@ -79,33 +97,171 @@ void ForwardGlobalPlanner::updateParameters()
   RCLCPP_INFO_STREAM(nh_->get_logger(), "[ForwardGlobalPlanner.transform_tolerance: " << transform_tolerance_);
 }
 
-void ForwardGlobalPlanner::cleanup() {}
+/**
+******************************************************************************************************************
+* cleanup()
+******************************************************************************************************************
+*/
+void ForwardGlobalPlanner::cleanup() { this->cleanMarkers(); }
 
+/**
+******************************************************************************************************************
+* activate()
+******************************************************************************************************************
+*/
 void ForwardGlobalPlanner::activate() 
 { 
   RCLCPP_INFO_STREAM(nh_->get_logger(), "activating global planner ForwardGlobalPlanner");
   this->updateParameters();
-  planPub_->on_activate(); 
-  }
-
-void ForwardGlobalPlanner::deactivate()
-{
-  nav_msgs::msg::Path planMsg;
-  planPub_->publish(planMsg);
-  planPub_->on_deactivate();
+  planPub_->on_activate();
+  markersPub_->on_activate();
 }
 
+/**
+******************************************************************************************************************
+* deactivate()
+******************************************************************************************************************
+*/
+void ForwardGlobalPlanner::deactivate()
+{
+  RCLCPP_INFO_STREAM(nh_->get_logger(), "[ForwardGlobalPlanner] deactivating planner");
+
+  // clear
+  nav_msgs::msg::Path planMsg;
+  planMsg.header.stamp = nh_->now();
+  planPub_->publish(planMsg);
+
+  planPub_->on_deactivate();
+  this->cleanMarkers();
+  markersPub_->on_deactivate();
+}
+
+
+/**
+******************************************************************************************************************
+* publishGoalMarker()
+******************************************************************************************************************
+*/
+void ForwardGlobalPlanner::publishGoalMarker(
+  const geometry_msgs::msg::Pose & pose, double r, double g, double b)
+{
+  double phi = tf2::getYaw(pose.orientation);
+  visualization_msgs::msg::Marker marker;
+  marker.header.frame_id = this->costmap_ros_->getGlobalFrameID();
+  marker.header.stamp = nh_->now();
+  marker.ns = "my_namespace2";
+  marker.id = 0;
+  marker.type = visualization_msgs::msg::Marker::ARROW;
+  marker.action = visualization_msgs::msg::Marker::ADD;
+  marker.lifetime = rclcpp::Duration(0s);
+  marker.scale.x = 0.1;
+  marker.scale.y = 0.3;
+  marker.scale.z = 0.1;
+  marker.color.a = 1.0;
+  marker.color.r = r;
+  marker.color.g = g;
+  marker.color.b = b;
+
+  geometry_msgs::msg::Point start, end;
+  start.x = pose.position.x;
+  start.y = pose.position.y;
+
+  end.x = pose.position.x + 0.5 * cos(phi);
+  end.y = pose.position.y + 0.5 * sin(phi);
+
+  marker.points.push_back(start);
+  marker.points.push_back(end);
+
+  visualization_msgs::msg::MarkerArray ma;
+  ma.markers.push_back(marker);
+
+  markersPub_->publish(ma);
+}
+
+void ForwardGlobalPlanner::cleanMarkers()
+{
+  visualization_msgs::msg::Marker marker;
+  marker.header.frame_id = this->costmap_ros_->getGlobalFrameID();
+  marker.header.stamp = nh_->now();
+  marker.ns = "my_namespace2";
+  marker.id = 0;
+  marker.action = visualization_msgs::msg::Marker::DELETEALL;
+
+  visualization_msgs::msg::MarkerArray ma;
+  ma.markers.push_back(marker);
+
+  markersPub_->publish(ma);
+}
+
+
+/**
+******************************************************************************************************************
+* defaultForwardPath()
+******************************************************************************************************************
+*/
+void ForwardGlobalPlanner::createDefaultForwardPath(
+  const geometry_msgs::msg::PoseStamped & start, const geometry_msgs::msg::PoseStamped & goal,
+  std::vector<geometry_msgs::msg::PoseStamped> & plan)
+{
+  auto q = start.pose.orientation;
+
+  //geometry_msgs::msg::PoseStamped pose;
+  //pose = start;
+
+  double dx = start.pose.position.x - goal.pose.position.x;
+  double dy = start.pose.position.y - goal.pose.position.y;
+
+  double length = sqrt(dx * dx + dy * dy);
+
+  geometry_msgs::msg::PoseStamped prevState;
+  if (length > skip_straight_motion_distance_)
+  {
+    // skip initial pure spinning and initial straight motion
+    RCLCPP_INFO(
+      nh_->get_logger(), "1 - heading to goal position pure spinning radstep: %lf",
+      puresSpinningRadStep_);
+    double heading_direction = atan2(dy, dx);
+    double startyaw = tf2::getYaw(q);
+    double offset = angles::shortest_angular_distance(startyaw, heading_direction);
+    heading_direction = startyaw + offset;
+
+    prevState =
+      cl_nav2z::makePureSpinningSubPlan(start, heading_direction, plan, puresSpinningRadStep_);
+    RCLCPP_INFO(nh_->get_logger(), "2 - going forward keep orientation pure straight");
+
+    prevState = cl_nav2z::makePureStraightSubPlan(prevState, goal.pose.position, length, plan);
+  }
+  else
+  {
+    prevState = start;
+  }
+
+  RCLCPP_INFO(nh_->get_logger(), "3 - heading to goal orientation");
+  double goalOrientation = angles::normalize_angle(tf2::getYaw(goal.pose.orientation));
+  cl_nav2z::makePureSpinningSubPlan(prevState, goalOrientation, plan, puresSpinningRadStep_);
+
+  RCLCPP_WARN_STREAM(
+    nh_->get_logger(), "[ForwardGlobalPlanner] forward global plan size:  " << plan.size());
+}
+
+
+/**
+******************************************************************************************************************
+* createPlan()
+******************************************************************************************************************
+*/
 nav_msgs::msg::Path ForwardGlobalPlanner::createPlan(
   const geometry_msgs::msg::PoseStamped & start, const geometry_msgs::msg::PoseStamped & goal)
 {
 
   this->updateParameters();
-
-  RCLCPP_INFO(nh_->get_logger(), "[Forward Global Planner] planning");
+  RCLCPP_INFO_STREAM(
+    nh_->get_logger(), "[ForwardGlobalPlanner] goal frame id: "
+                         << goal.header.frame_id << " pose: " << goal.pose.position);
+  RCLCPP_INFO_STREAM(
+    nh_->get_logger(), "[ForwardGlobalPlanner] goal pose frame id: " << goal.header.frame_id);
 
   rclcpp::Duration ttol = rclcpp::Duration::from_seconds(transform_tolerance_);
-
-  RCLCPP_INFO(nh_->get_logger(), "[Forward Global Planner] getting start and goal poses");
   //---------------------------------------------------------------------
   geometry_msgs::msg::PoseStamped transformedStart;
   nav_2d_utils::transformPose(tf_, costmap_ros_->getGlobalFrameID(), start, transformedStart, ttol);
@@ -114,61 +270,29 @@ nav_msgs::msg::Path ForwardGlobalPlanner::createPlan(
   geometry_msgs::msg::PoseStamped transformedGoal;
   nav_2d_utils::transformPose(tf_, costmap_ros_->getGlobalFrameID(), goal, transformedGoal, ttol);
   transformedGoal.header.frame_id = costmap_ros_->getGlobalFrameID();
-  //---------------------------------------------------------------------
-
-  RCLCPP_INFO(nh_->get_logger(), "[Forward Global Planner] creating plan vector");
-  nav_msgs::msg::Path planMsg;
-  std::vector<geometry_msgs::msg::PoseStamped> plan;
-
-  // three stages: 1 - heading to goal position, 2 - going forward keep orientation, 3 - heading to goal orientation
-
-  // 1 - heading to goal position
-  // orientation direction
-
-  double dx = transformedGoal.pose.position.x - transformedStart.pose.position.x;
-  double dy = transformedGoal.pose.position.y - transformedStart.pose.position.y;
-
-  double length = sqrt(dx * dx + dy * dy);
 
   RCLCPP_INFO_STREAM(
-    nh_->get_logger(),
-    "[Forward Global Planner] current plan length: " << length);
+  nh_->get_logger(), "[ForwardGlobalPlanner] creating default forward global plan");
+  //---------------------------------------------------------------------
+  std::vector<geometry_msgs::msg::PoseStamped> plan;
+  this->createDefaultForwardPath(transformedStart, transformedGoal, plan);
 
 
-  geometry_msgs::msg::PoseStamped prevState;
-  if (length > skip_straight_motion_distance_)
-  {
-    // skip initial pure spinning and initial straight motion
-    RCLCPP_INFO(nh_->get_logger(), "1 - heading to goal position pure spinning");
-    double heading_direction = atan2(dy, dx);
-    prevState = cl_nav2z::makePureSpinningSubPlan(
-      transformedStart, heading_direction, plan, puresSpinningRadStep_);
+  RCLCPP_INFO_STREAM(nh_->get_logger(), "[ForwardGlobalPlanner] publishing markers");
+  publishGoalMarker(transformedGoal.pose, 1.0, 0, 1.0);
 
-    // RCLCPP_INFO(nh_->get_logger(), "2 - going forward keep orientation pure straight");
-    prevState =
-      cl_nav2z::makePureStraightSubPlan(prevState, transformedGoal.pose.position, length, plan);
-  }
-  else
-  {
-    prevState = transformedStart;
-  }
-
-  RCLCPP_INFO(nh_->get_logger(), "3 - heading to goal orientation");
-  double goalOrientation = angles::normalize_angle(tf2::getYaw(transformedGoal.pose.orientation));
-  cl_nav2z::makePureSpinningSubPlan(prevState, goalOrientation, plan, puresSpinningRadStep_);
+  nav_msgs::msg::Path planMsg;
   planMsg.poses = plan;
   planMsg.header.stamp = this->nh_->now();
   planMsg.header.frame_id = this->costmap_ros_->getGlobalFrameID();
 
-  RCLCPP_INFO_STREAM(
-    nh_->get_logger(), "[Forward Global Planner] generated plan size: " << plan.size());
-
-  // check plan rejection
+  //---------------------------------------------------------------------
+  // check plan rejection if obstacle is found
   bool acceptedGlobalPlan = true;
 
-  RCLCPP_INFO(
-    nh_->get_logger(), "[Forward Global Planner] checking obstacles in the generated plan");
-  nav2_costmap_2d::Costmap2D * costmap2d = this->costmap_ros_->getCostmap();
+  RCLCPP_INFO_STREAM(
+    nh_->get_logger(), "[ForwardGlobalPlanner] checking forwards trajectory on costmap");
+  auto costmap2d = this->costmap_ros_->getCostmap();
   for (auto & p : plan)
   {
     unsigned int mx, my;
@@ -179,34 +303,35 @@ nav_msgs::msg::Path ForwardGlobalPlanner::createPlan(
     // static const unsigned char LETHAL_OBSTACLE = 254;
     // static const unsigned char INSCRIBED_INFLATED_OBSTACLE = 253;
     // static const unsigned char FREE_SPACE = 0;
-
     if (cost >= nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE)
     {
-      RCLCPP_INFO_STREAM(
-        nh_->get_logger(), "[Forward Global Planner] pose " << p.pose.position.x << ", "
-                                                            << p.pose.position.y
-                                                            << " rejected, cost: " << cost);
-      acceptedGlobalPlan = false;
+      RCLCPP_WARN_STREAM(
+        nh_->get_logger(),
+        "[ForwardGlobalPlanner] forwards plan is rejected because interscts the obstacle "
+        "inscribed inflated obstacle"
+          << " at: " << p.pose.position.x << " " << p.pose.position.y);
+        acceptedGlobalPlan = false;
+
       break;
     }
   }
 
-  if (acceptedGlobalPlan)
+  if (!acceptedGlobalPlan)
   {
-    RCLCPP_INFO_STREAM(
-      nh_->get_logger(), "[Forward Global Planner] accepted plan: " << plan.size());
-    planPub_->publish(planMsg);
-    return planMsg;
-  }
-  else
-  {
-    RCLCPP_INFO(nh_->get_logger(), "[Forward Global Planner] plan rejected");
+    RCLCPP_WARN_STREAM(
+      nh_->get_logger(),
+      "[ForwardGlobalPlanner] forward plan request is not accepted, returning "
+      "empty path");
     planMsg.poses.clear();
-    planPub_->publish(planMsg);
-    return planMsg;
   }
-}
 
+  RCLCPP_WARN_STREAM(
+    nh_->get_logger(), "[ForwardGlobalPlanner] forward global plan publishing path. poses count: "
+                         << planMsg.poses.size());
+  planPub_->publish(planMsg);
+
+  return planMsg;
+}
 }  // namespace forward_global_planner
 }  // namespace cl_nav2z
 

@@ -120,16 +120,15 @@ void BackwardLocalPlanner::configure(
 
   declareOrSet(
     nh_, name_ + ".pure_spinning_straight_line_mode", straightBackwardsAndPureSpinningMode_);
-
   declareOrSet(nh_, name_ + ".k_rho", k_rho_);
   declareOrSet(nh_, name_ + ".k_alpha", k_alpha_);
   declareOrSet(nh_, name_ + ".k_betta", k_betta_);
   declareOrSet(nh_, name_ + ".linear_mode_rho_error_threshold", linear_mode_rho_error_threshold_);
-
   declareOrSet(nh_, name_ + ".carrot_distance", carrot_distance_);
+  declareOrSet(nh_, name_ + ".yaw_goal_tolerance", yaw_goal_tolerance_);
+  declareOrSet(nh_, name_ + ".xy_goal_tolerance", xy_goal_tolerance_);
   declareOrSet(nh_, name_ + ".carrot_angular_distance", carrot_angular_distance_);
   declareOrSet(nh_, name_ + ".enable_obstacle_checking", enable_obstacle_checking_);
-
   declareOrSet(nh_, name_ + ".max_linear_x_speed", max_linear_x_speed_);
   declareOrSet(nh_, name_ + ".max_angular_z_speed", max_angular_z_speed_);
 

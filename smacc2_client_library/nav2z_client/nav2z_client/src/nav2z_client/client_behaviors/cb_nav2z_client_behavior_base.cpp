@@ -80,7 +80,7 @@ bool CbNav2ZClientBehaviorBase::isOwnActionResponse(const ClNav2Z::WrappedResult
 
 void CbNav2ZClientBehaviorBase::onNavigationResult(const ClNav2Z::WrappedResult & r)
 {
-  RCLCPP_DEBUG(
+  RCLCPP_INFO(
     getLogger(), "[%s] Received result event from action server, result code", getName().c_str());
 
   if (r.code == rclcpp_action::ResultCode::SUCCEEDED)

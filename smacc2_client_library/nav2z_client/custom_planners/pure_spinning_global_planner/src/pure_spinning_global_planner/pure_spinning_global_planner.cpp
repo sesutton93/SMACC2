@@ -170,47 +170,47 @@ nav_msgs::msg::Path PureSpinningGlobalPlanner::createPlan(
     nh_->get_logger(), "[Pure Spinning Global Planner] generated plan size: " << plan.size());
 
   // check plan rejection
-  bool acceptedGlobalPlan = true;
+  // bool acceptedGlobalPlan = true;
 
-  RCLCPP_INFO(
-    nh_->get_logger(), "[Pure Spinning Global Planner] checking obstacles in the generated plan");
-  nav2_costmap_2d::Costmap2D * costmap2d = this->costmap_ros_->getCostmap();
-  for (auto & p : plan)
-  {
-    unsigned int mx, my;
-    costmap2d->worldToMap(p.pose.position.x, p.pose.position.y, mx, my);
-    auto cost = costmap2d->getCost(mx, my);
+  // RCLCPP_INFO(
+  //   nh_->get_logger(), "[Pure Spinning Global Planner] checking obstacles in the generated plan");
+  // nav2_costmap_2d::Costmap2D * costmap2d = this->costmap_ros_->getCostmap();
+  // for (auto & p : plan)
+  // {
+  //   unsigned int mx, my;
+  //   costmap2d->worldToMap(p.pose.position.x, p.pose.position.y, mx, my);
+  //   auto cost = costmap2d->getCost(mx, my);
 
     // static const unsigned char NO_INFORMATION = 255;
     // static const unsigned char LETHAL_OBSTACLE = 254;
     // static const unsigned char INSCRIBED_INFLATED_OBSTACLE = 253;
     // static const unsigned char FREE_SPACE = 0;
 
-    if (cost >= nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE)
-    {
-      RCLCPP_INFO_STREAM(
-        nh_->get_logger(), "[Pure Spinning Global Planner] pose " << p.pose.position.x << ", "
-                                                                  << p.pose.position.y
-                                                                  << " rejected, cost: " << cost);
-      acceptedGlobalPlan = false;
-      break;
-    }
-  }
+    // if (cost >= nav2_costmap_2d::INSCRIBED_INFLATED_OBSTACLE)
+    // {
+    //   RCLCPP_INFO_STREAM(
+    //     nh_->get_logger(), "[Pure Spinning Global Planner] pose " << p.pose.position.x << ", "
+    //                                                               << p.pose.position.y
+    //                                                               << " rejected, cost: " << cost);
+    //   acceptedGlobalPlan = false;
+    //   break;
+    // }
+  // }
 
-  if (acceptedGlobalPlan)
-  {
-    RCLCPP_INFO_STREAM(
-      nh_->get_logger(), "[Pure Spinning Global Planner] accepted plan: " << plan.size());
-    planPub_->publish(planMsg);
-    return planMsg;
-  }
-  else
-  {
-    RCLCPP_INFO(nh_->get_logger(), "[Pure Spinning Global Planner] plan rejected");
-    planMsg.poses.clear();
-    planPub_->publish(planMsg);
-    return planMsg;
-  }
+  // if (acceptedGlobalPlan)
+  // {
+  //   // RCLCPP_INFO_STREAM(
+  //   //   nh_->get_logger(), "[Pure Spinning Global Planner] accepted plan: " << plan.size());
+  planPub_->publish(planMsg);
+  return planMsg;
+  // }
+  // else
+  // {
+  //   RCLCPP_INFO(nh_->get_logger(), "[Pure Spinning Global Planner] plan rejected");
+  //   planMsg.poses.clear();
+  //   planPub_->publish(planMsg);
+  //   return planMsg;
+  // }
 }
 
 }  // namespace pure_spinning_global_planner

@@ -18,19 +18,22 @@ find_package(nav_msgs)
 find_package(nav2_costmap_2d)
 find_package(geometry_msgs)
 find_package(tf2)
-find_package(nav2z_planners_common)
 find_package(pluginlib)
+find_package(angles)
 find_package(nav_2d_utils)
+find_package(nav2z_planners_common)
 
 set(dependencies
   nav2_core
   nav_msgs
   nav2_costmap_2d
   geometry_msgs
+  visualization_msgs
   tf2
-  nav2z_planners_common
   pluginlib
+  angles
   nav_2d_utils
+  nav2z_planners_common
 )
 
 include_directories(include)
