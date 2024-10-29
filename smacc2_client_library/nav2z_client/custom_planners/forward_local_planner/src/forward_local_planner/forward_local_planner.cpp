@@ -106,7 +106,7 @@ void ForwardLocalPlanner::configure(
   this->name_ = name;
 
   k_rho_ = 1.0;
-  k_alpha_ = -0.5;
+  k_alpha_ = -0.4;
   k_betta_ = -1.0;  // set to zero means that orientation is not important
   carrot_angular_distance_ = 0.4;
   linear_mode_rho_error_threshold_ = 0.02;
