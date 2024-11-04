@@ -18,66 +18,127 @@
  *
  ******************************************************************************************************************/
 
-#include <tf2/utils.h>
-#include <geometry_msgs/msg/quaternion_stamped.hpp>
-#include <nav2z_client/client_behaviors/cb_navigate_backwards.hpp>
 #include <nav2z_client/common.hpp>
+
+#include <nav2z_client/client_behaviors/cb_navigate_backward.hpp>
 #include <nav2z_client/components/goal_checker_switcher/cp_goal_checker_switcher.hpp>
 #include <nav2z_client/components/odom_tracker/cp_odom_tracker.hpp>
 #include <nav2z_client/components/pose/cp_pose.hpp>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 
 namespace cl_nav2z
 {
-using namespace ::cl_nav2z::odom_tracker;
 
-CbNavigateBackwards::CbNavigateBackwards(float backwardDistance)
+using ::cl_nav2z::odom_tracker::CpOdomTracker;
+using ::cl_nav2z::odom_tracker::WorkingMode;
+
+using ::cl_nav2z::Pose;
+
+CbNavigateBackward::CbNavigateBackward(float distance_meters) : backwardDistance_(distance_meters) {}
+CbNavigateBackward::CbNavigateBackward() {}
+
+CbNavigateBackward::CbNavigateBackward(geometry_msgs::msg::PoseStamped goal) : goalPose_(goal) {}
+
+CbNavigateBackward::~CbNavigateBackward() {}
+
+
+void CbNavigateBackward::setBackwardDistance(float distance_meters)
 {
-  if (backwardDistance < 0)
+  if (distance_meters < 0)
   {
-    RCLCPP_ERROR(getLogger(), "[CbNavigateBackwards] distance must be greater or equal than 0");
-    this->backwardDistance = 0;
+    RCLCPP_INFO_STREAM(
+      getLogger(), "[" << getName() << "] negative backward distance: " << distance_meters
+                       << ". Resetting to 0.");
+    distance_meters = 0;
   }
-  this->backwardDistance = backwardDistance;
-}
-
-void CbNavigateBackwards::onEntry()
-{
-  // straight motion distance
-  double dist = backwardDistance;
+  backwardDistance_ = distance_meters;
 
   RCLCPP_INFO_STREAM(
-    getLogger(), "[CbNavigateBackwards] Straight backwards motion distance: " << dist);
+    getLogger(), "[" << getName() << "] setting bw motion distance: " << *backwardDistance_);
+}
 
-  auto p = nav2zClient_->getComponent<cl_nav2z::Pose>();
+void CbNavigateBackward::onEntry()
+{
+  // straight motion distance
+  if (backwardDistance_)
+  {
+    setBackwardDistance(*backwardDistance_);
+
+    RCLCPP_INFO_STREAM(
+      getLogger(), "[" << getName() << "] Straight motion distance: " << *backwardDistance_);
+  }
+
+  // get current pose
+  auto p = nav2zClient_->getComponent<Pose>();
   auto referenceFrame = p->getReferenceFrame();
   auto currentPoseMsg = p->toPoseMsg();
+
+
+  RCLCPP_INFO_STREAM(
+    getLogger(), "[" << getName() << "]"
+                     << "current pose: " << currentPoseMsg);
+
+  // force global orientation if it is requested
+  if (options.forceInitialOrientation)
+  {
+    currentPoseMsg.orientation = *(options.forceInitialOrientation);
+    RCLCPP_WARN_STREAM(
+      getLogger(),
+      "[" << getName() << "]"
+          << "Forcing initial straight motion orientation: " << currentPoseMsg.orientation);
+  }
+
   tf2::Transform currentPose;
   tf2::fromMsg(currentPoseMsg, currentPose);
 
-  tf2::Transform backwardDeltaTransform;
-  backwardDeltaTransform.setIdentity();
-  backwardDeltaTransform.setOrigin(tf2::Vector3(-dist, 0, 0));
+  tf2::Transform targetPose;
+  if (goalPose_)
+  {
+    tf2::fromMsg(goalPose_->pose, targetPose);
+  }
+  else if (backwardDistance_)
+  {
+    // compute forward goal pose
+    tf2::Transform backwardDeltaTransform;
+    backwardDeltaTransform.setIdentity();
+    backwardDeltaTransform.setOrigin(tf2::Vector3(-*backwardDistance_, 0, 0));
 
-  tf2::Transform targetPose = currentPose * backwardDeltaTransform;
+    targetPose = currentPose * backwardDeltaTransform;
+  }
+  else
+  {
+    RCLCPP_WARN_STREAM(
+      getLogger(),
+      "[" << getName() << "]"
+          << "No goal Pose or Distance is specified. Aborting. No action request is sent."
+          << currentPoseMsg.orientation);
 
+    return;
+  }
+
+
+ 
+  // action goal
   ClNav2Z::Goal goal;
   goal.pose.header.frame_id = referenceFrame;
   //goal.pose.header.stamp = getNode()->now();
   tf2::toMsg(targetPose, goal.pose.pose);
-  RCLCPP_INFO_STREAM(getLogger(), "[CbNavigateBackwards] TARGET POSE BACKWARDS: " << goal.pose);
+  RCLCPP_INFO_STREAM(getLogger(), "[CbNavigateBackward] TARGET POSE BACKWARDS: " << goal.pose);
 
+  // current pose
   geometry_msgs::msg::PoseStamped currentStampedPoseMsg;
   currentStampedPoseMsg.header.frame_id = referenceFrame;
   currentStampedPoseMsg.header.stamp = getNode()->now();
+
   tf2::toMsg(currentPose, currentStampedPoseMsg.pose);
 
   odomTracker_ = nav2zClient_->getComponent<CpOdomTracker>();
   if (odomTracker_ != nullptr)
   {
-    this->odomTracker_->clearPath();
-    this->odomTracker_->setStartPoint(currentStampedPoseMsg);
-    this->odomTracker_->setWorkingMode(WorkingMode::RECORD_PATH);
+    auto pathname = this->getCurrentState()->getName() + " - " + getName();
+    odomTracker_->pushPath(pathname);
+    odomTracker_->setStartPoint(currentStampedPoseMsg);
+    odomTracker_->setCurrentMotionGoal(goal.pose);
+    odomTracker_->setWorkingMode(WorkingMode::RECORD_PATH);
   }
 
   auto plannerSwitcher = nav2zClient_->getComponent<CpPlannerSwitcher>();
@@ -89,7 +150,7 @@ void CbNavigateBackwards::onEntry()
   this->sendGoal(goal);
 }
 
-void CbNavigateBackwards::onExit()
+void CbNavigateBackward::onExit()
 {
   if (odomTracker_)
   {

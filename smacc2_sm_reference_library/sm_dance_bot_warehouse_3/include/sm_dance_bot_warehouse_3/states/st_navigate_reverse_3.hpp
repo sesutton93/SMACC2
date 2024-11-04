@@ -32,15 +32,15 @@ struct StNavigateReverse3 : smacc2::SmaccState<StNavigateReverse3, MsDanceBotRun
   // TRANSITION TABLE
   typedef mpl::list<
 
-    Transition<EvCbSuccess<CbNavigateBackwards, OrNavigation>, StNavigateToWaypoint1>,
-    Transition<EvCbFailure<CbNavigateBackwards, OrNavigation>, StNavigateToWaypointsX>
+    Transition<EvCbSuccess<CbNavigateBackward, OrNavigation>, StNavigateToWaypoint1>,
+    Transition<EvCbFailure<CbNavigateBackward, OrNavigation>, StNavigateToWaypointsX>
 
     >reactions;
 
   // STATE FUNCTIONS
   static void staticConfigure()
   {
-    configure_orthogonal<OrNavigation, CbNavigateBackwards>(1);
+    configure_orthogonal<OrNavigation, CbNavigateBackward>(1);
     configure_orthogonal<OrNavigation, CbPauseSlam>();
     configure_orthogonal<OrLED, CbLEDOff>();
     configure_orthogonal<OrObstaclePerception, CbLidarSensor>();

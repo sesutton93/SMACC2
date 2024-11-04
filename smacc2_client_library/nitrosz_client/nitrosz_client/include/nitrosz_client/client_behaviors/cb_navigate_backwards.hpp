@@ -29,7 +29,7 @@
 namespace cl_nitrosz
 {
 // It sends the mobile base some distance backwards
-class CbNavigateBackwards : public CbNav2ZClientBehaviorBase
+class CbNavigateBackward : public CbNav2ZClientBehaviorBase
 {
 public:
   float backwardDistance;
@@ -41,7 +41,7 @@ public:
 
   cl_nitrosz::odom_tracker::CpOdomTracker * odomTracker_;
 
-  CbNavigateBackwards(float backwardDistanceMeters);
+  CbNavigateBackward(float backwardDistanceMeters);
 
   void onEntry() override;
 

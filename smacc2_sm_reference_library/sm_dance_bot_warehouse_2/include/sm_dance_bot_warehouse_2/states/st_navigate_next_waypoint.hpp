@@ -32,8 +32,8 @@ struct StNavigateNextWaypoint : smacc2::SmaccState<StNavigateNextWaypoint, MsDan
   // TRANSITION TABLE
   typedef mpl::list<
 
-    Transition<EvCbSuccess<CbNavigateBackwards, OrNavigation>, StRotateDegrees3>,
-    Transition<EvCbFailure<CbNavigateBackwards, OrNavigation>, StNavigateUndoMotion2>
+    Transition<EvCbSuccess<CbNavigateBackward, OrNavigation>, StRotateDegrees3>,
+    Transition<EvCbFailure<CbNavigateBackward, OrNavigation>, StNavigateUndoMotion2>
 
     >reactions;
 

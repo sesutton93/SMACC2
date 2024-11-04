@@ -19,7 +19,7 @@
 #include <nitrosz_client/client_behaviors/cb_rotate.hpp>
 #include <nitrosz_client/client_behaviors/cb_rotate_look_at.hpp>
 
-#include <nitrosz_client/client_behaviors/cb_navigate_backwards.hpp>
+#include <nitrosz_client/client_behaviors/cb_navigate_backward.hpp>
 #include <nitrosz_client/client_behaviors/cb_navigate_forward.hpp>
 #include <nitrosz_client/client_behaviors/cb_navigate_global_position.hpp>
 #include <nitrosz_client/client_behaviors/cb_retry_behavior.hpp>

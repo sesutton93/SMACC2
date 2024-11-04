@@ -206,9 +206,12 @@ void BackwardGlobalPlanner::createDefaultBackwardPath(
 
   geometry_msgs::msg::PoseStamped pose;
   pose = start;
+  RCLCPP_WARN(nh_->get_logger(), "start x %lf start y %lf", start.pose.position.x, start.pose.position.y);
+  RCLCPP_WARN(nh_->get_logger(), "goal x %lf goal y %lf", goal.pose.position.x, goal.pose.position.y);
 
   double dx = start.pose.position.x - goal.pose.position.x;
   double dy = start.pose.position.y - goal.pose.position.y;
+  RCLCPP_WARN(nh_->get_logger(), "d x %lf d y %lf", dx, dy);
 
   double length = sqrt(dx * dx + dy * dy);
 
@@ -223,6 +226,7 @@ void BackwardGlobalPlanner::createDefaultBackwardPath(
     double startyaw = tf2::getYaw(q);
     double offset = angles::shortest_angular_distance(startyaw, heading_direction);
     heading_direction = startyaw + offset;
+    RCLCPP_WARN(nh_->get_logger(), "startyaw %lf offset %lf heading direction %lf", startyaw, offset, heading_direction);
 
     prevState =
       cl_nav2z::makePureSpinningSubPlan(start, heading_direction, plan, puresSpinningRadStep_);
@@ -234,6 +238,11 @@ void BackwardGlobalPlanner::createDefaultBackwardPath(
   {
     prevState = start;
   }
+
+  RCLCPP_INFO(nh_->get_logger(), "3 - heading to goal orientation");
+  double goalOrientation = angles::normalize_angle(tf2::getYaw(goal.pose.orientation));
+  cl_nav2z::makePureSpinningSubPlan(prevState, goalOrientation, plan, puresSpinningRadStep_);
+
 
   RCLCPP_WARN_STREAM(
     nh_->get_logger(), "[BackwardGlobalPlanner] backward global plan size:  " << plan.size());

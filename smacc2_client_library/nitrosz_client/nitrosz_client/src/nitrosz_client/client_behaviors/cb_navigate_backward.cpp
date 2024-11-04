@@ -20,7 +20,7 @@
 
 #include <tf2/utils.h>
 #include <geometry_msgs/msg/quaternion_stamped.hpp>
-#include <nitrosz_client/client_behaviors/cb_navigate_backwards.hpp>
+#include <nitrosz_client/client_behaviors/cb_navigate_backward.hpp>
 #include <nitrosz_client/common.hpp>
 #include <nitrosz_client/components/goal_checker_switcher/cp_goal_checker_switcher.hpp>
 #include <nitrosz_client/components/odom_tracker/cp_odom_tracker.hpp>
@@ -31,23 +31,23 @@ namespace cl_nitrosz
 {
 using namespace ::cl_nitrosz::odom_tracker;
 
-CbNavigateBackwards::CbNavigateBackwards(float backwardDistance)
+CbNavigateBackward::CbNavigateBackward(float backwardDistance)
 {
   if (backwardDistance < 0)
   {
-    RCLCPP_ERROR(getLogger(), "[CbNavigateBackwards] distance must be greater or equal than 0");
+    RCLCPP_ERROR(getLogger(), "[CbNavigateBackward] distance must be greater or equal than 0");
     this->backwardDistance = 0;
   }
   this->backwardDistance = backwardDistance;
 }
 
-void CbNavigateBackwards::onEntry()
+void CbNavigateBackward::onEntry()
 {
   // straight motion distance
   double dist = backwardDistance;
 
   RCLCPP_INFO_STREAM(
-    getLogger(), "[CbNavigateBackwards] Straight backwards motion distance: " << dist);
+    getLogger(), "[CbNavigateBackward] Straight backwards motion distance: " << dist);
 
   auto p = nitroszClient_->getComponent<cl_nitrosz::Pose>();
   auto referenceFrame = p->getReferenceFrame();
@@ -65,7 +65,7 @@ void CbNavigateBackwards::onEntry()
   goal.pose.header.frame_id = referenceFrame;
   //goal.pose.header.stamp = getNode()->now();
   tf2::toMsg(targetPose, goal.pose.pose);
-  RCLCPP_INFO_STREAM(getLogger(), "[CbNavigateBackwards] TARGET POSE BACKWARDS: " << goal.pose);
+  RCLCPP_INFO_STREAM(getLogger(), "[CbNavigateBackward] TARGET POSE BACKWARDS: " << goal.pose);
 
   geometry_msgs::msg::PoseStamped currentStampedPoseMsg;
   currentStampedPoseMsg.header.frame_id = referenceFrame;
@@ -89,7 +89,7 @@ void CbNavigateBackwards::onEntry()
   this->sendGoal(goal);
 }
 
-void CbNavigateBackwards::onExit()
+void CbNavigateBackward::onExit()
 {
   if (odomTracker_)
   {

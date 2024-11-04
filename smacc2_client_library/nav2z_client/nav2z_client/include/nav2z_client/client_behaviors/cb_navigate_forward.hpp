@@ -58,7 +58,7 @@ public:
   // It is specially to retry a previous relative incorrect motions based on distance.
   // The developer user is in charge of setting a valid goal position that is located forward
   // from the current position and orientation.
-  CbNavigateForward(geometry_msgs::msg::PoseStamped goalPosition);
+  CbNavigateForward(geometry_msgs::msg::PoseStamped goal);
 
   virtual ~CbNavigateForward();
 

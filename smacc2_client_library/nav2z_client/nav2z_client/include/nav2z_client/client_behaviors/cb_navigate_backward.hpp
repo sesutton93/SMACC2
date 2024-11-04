@@ -29,22 +29,46 @@
 namespace cl_nav2z
 {
 // It sends the mobile base some distance backwards
-class CbNavigateBackwards : public CbNav2ZClientBehaviorBase
+struct CbNavigateBackwardOptions
 {
-public:
-  float backwardDistance;
-
   // just a stub to show how to use parameterless constructor
   std::optional<float> backwardSpeed;
 
+  // this may be useful in the case you want to do a straight line with some known direction
+  // and the robot may not have that specific initial orientation at that moment.
+  // If it is not set, the orientation of the straight line is the orientation of the initial (current) state.
+  std::optional<geometry_msgs::msg::Quaternion> forceInitialOrientation;
+
+  // the name of the goal checker selected in the navigation2 stack
   std::optional<std::string> goalChecker_;
+};
 
-  cl_nav2z::odom_tracker::CpOdomTracker * odomTracker_;
+// Performs a relative motion backwards
+class CbNavigateBackward : public CbNav2ZClientBehaviorBase
+{
+public:
+  CbNavigateBackwardOptions options;
 
-  CbNavigateBackwards(float backwardDistanceMeters);
+  CbNavigateBackward();
+
+  CbNavigateBackward(float backwardDistance);
+
+  CbNavigateBackward(geometry_msgs::msg::PoseStamped goalPosition); 
+  ~CbNavigateBackward();
+
 
   void onEntry() override;
 
   void onExit() override;
+
+  void setBackwardDistance(float distance_meters);
+
+protected:
+  // required component
+  odom_tracker::CpOdomTracker * odomTracker_;
+
+  std::optional<geometry_msgs::msg::PoseStamped> goalPose_;
+
+  std::optional<float> backwardDistance_;
 };
 }  // namespace cl_nav2z
